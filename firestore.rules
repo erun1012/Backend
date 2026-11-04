@@ -1,0 +1,22 @@
+rules_version = '2';
+
+// 초안 - 스키마 확정 후 컬렉션별로 구체화할 것 (docs/BACKEND_TASKS.md 대1-3)
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    // 본인 유저 문서만 읽기/수정
+    match /users/{uid} {
+      allow read: if signedIn();
+      allow write: if signedIn() && request.auth.uid == uid;
+    }
+
+    // 나머지는 기본 차단 (서버 함수에서만 접근)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
