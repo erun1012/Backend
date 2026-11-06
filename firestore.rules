@@ -11,7 +11,12 @@ service cloud.firestore {
     // 본인 유저 문서만 읽기/수정
     match /users/{uid} {
       allow read: if signedIn();
-      allow write: if signedIn() && request.auth.uid == uid;
+      allow create: if signedIn() && request.auth.uid == uid
+        && !request.resource.data.keys().hasAny(['lateCount', 'totalLateMinutes']);
+      allow update: if signedIn() && request.auth.uid == uid
+        && !request.resource.data.diff(resource.data).affectedKeys()
+            .hasAny(['lateCount', 'totalLateMinutes']);
+      allow delete: if false;
     }
 
     // 나머지는 기본 차단 (서버 함수에서만 접근)

@@ -4,9 +4,10 @@
     ".write": false,
     "locations": {
       "$appointmentId": {
+        ".read": "auth != null && root.child('members').child($appointmentId).child(auth.uid).exists()",
         "$uid": {
-          ".read": "auth != null",
-          ".write": "auth != null && auth.uid === $uid"
+          ".write": "auth != null && auth.uid === $uid && root.child('members').child($appointmentId).child(auth.uid).exists()",
+          ".validate": "newData.hasChildren(['lat', 'lng']) && newData.child('lat').isNumber() && newData.child('lng').isNumber() && newData.child('lat').val() >= -90 && newData.child('lat').val() <= 90 && newData.child('lng').val() >= -180 && newData.child('lng').val() <= 180"
         }
       }
     }

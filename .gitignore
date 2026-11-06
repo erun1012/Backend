@@ -27,3 +27,9 @@ local.properties
 firebase-debug.log
 firebase-debug.*.log
 ui-debug.log
+
+# Node (rules-test)
+node_modules/
+
+# Firebase emulator
+*-debug.log
