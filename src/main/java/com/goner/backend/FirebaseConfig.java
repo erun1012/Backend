@@ -18,12 +18,15 @@ public final class FirebaseConfig {
             return FirebaseApp.getInstance();
         }
         try {
-            FirebaseOptions options = FirebaseOptions.builder()
-                    .setCredentials(com.google.auth.oauth2.GoogleCredentials.getApplicationDefault())
-                    // TODO: RTDB URL 확정되면 환경변수로 주입
-                    // .setDatabaseUrl(System.getenv("FIREBASE_DATABASE_URL"))
-                    .build();
-            return FirebaseApp.initializeApp(options);
+            FirebaseOptions.Builder builder = FirebaseOptions.builder();
+            if(System.getenv("FIREBASE_AUTH_EMULATOR_HOST") != null) {
+                builder.setCredentials(com.google.auth.oauth2.GoogleCredentials.newBuilder().build())
+                        .setProjectId(System.getenv("GCLOUD_PROJECT"));
+            } else {
+                builder.setCredentials(com.google.auth.oauth2.GoogleCredentials.getApplicationDefault());
+            }
+
+            return FirebaseApp.initializeApp(builder.build());
         } catch (IOException e) {
             throw new IllegalStateException("Firebase 초기화 실패", e);
         }
