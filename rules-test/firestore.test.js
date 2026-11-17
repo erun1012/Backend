@@ -39,6 +39,25 @@ describe('users', () => {
         const db = env.authenticatedContext('alice').firestore();
         await assertFails(db.doc('users/alice').update({ lateCount: 0 }));
         await assertSucceeds(db.doc('users/alice').update({ nickname: 'new' }));
+    })
+    test('본인이 서버 전용 필드 생성 불가', async () => {
+        const db = env.authenticatedContext('alice').firestore();
+        await assertFails(db.doc('users/alice').set({ nickname: 'a', friendCode: 'abcd' }));
+        await assertFails(db.doc('users/alice').set({ nickname: 'a', onboardingCompleted: true }));
+        await assertFails(db.doc('users/alice').set({ nickname: 'a', notificationEnabled: true }));
+    });
+    test('본인이 서버 전용 필드 수정 불가', async () => {
+        await env.withSecurityRulesDisabled(async (ctx) => {
+            await ctx.firestore().doc('users/alice').set({
+                nickname: 'a', friendCode: 'abcd',
+                onboardingCompleted: false, notificationEnabled: false
+            });
+        });
+        const db = env.authenticatedContext('alice').firestore();
+        await assertFails(db.doc('users/alice').update({ friendCode: 'hack' }));
+        await assertFails(db.doc('users/alice').update({ onboardingCompleted: true }));
+        await assertFails(db.doc('users/alice').update({ notificationEnabled: true }));
+        await assertSucceeds(db.doc('users/alice').update({ nickname: 'new' }));
     });
     test('본인 문서 삭제 불가', async () => {
         await env.withSecurityRulesDisabled(async (ctx) => {
