@@ -6,6 +6,9 @@ import com.google.cloud.functions.HttpRequest;
 import com.google.cloud.functions.HttpFunction;
 import com.google.cloud.functions.HttpResponse;
 import com.google.firebase.cloud.FirestoreClient;
+import static com.goner.backend.ApiUtil.error;
+import static com.goner.backend.ApiUtil.getString;
+import static com.goner.backend.ApiUtil.parseBody;
 
 import java.util.regex.Pattern;
 
@@ -18,15 +21,13 @@ public class CheckFriendCodeFunction implements HttpFunction{
 
         String uid = AuthUtil.verifyUid(request);
         if (uid == null) {
-            response.setStatusCode(401);
-            response.getWriter().write("{\"error\":\"unauthorized\"}");
+            error(response,401,"unauthorized");
             return;
         }
 
         String code = request.getFirstQueryParameter("code").orElse("");
         if (!CODE_PATTERN.matcher(code).matches()) {
-            response.setStatusCode(400);
-            response.getWriter().write("{\"error\":\"invalid_code\"}");
+            error(response,400,"invalid_code");
             return;
         }
 

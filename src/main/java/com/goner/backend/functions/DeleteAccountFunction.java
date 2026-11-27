@@ -11,6 +11,9 @@ import com.google.cloud.functions.HttpResponse;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseAuthException;
 import com.google.firebase.cloud.FirestoreClient;
+import static com.goner.backend.ApiUtil.error;
+import static com.goner.backend.ApiUtil.getString;
+import static com.goner.backend.ApiUtil.parseBody;
 
 import java.io.IOException;
 

@@ -8,7 +8,9 @@ import com.google.cloud.functions.HttpRequest;
 import com.google.cloud.functions.HttpResponse;
 import com.google.firebase.cloud.FirestoreClient;
 import com.google.gson.JsonObject;
-
+import static com.goner.backend.ApiUtil.error;
+import static com.goner.backend.ApiUtil.getString;
+import static com.goner.backend.ApiUtil.parseBody;
 import java.io.IOException;
 
 public class GetMeFunction implements HttpFunction {
