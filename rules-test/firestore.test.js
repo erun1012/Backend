@@ -59,6 +59,18 @@ describe('users', () => {
         await assertFails(db.doc('users/alice').update({ notificationEnabled: true }));
         await assertSucceeds(db.doc('users/alice').update({ nickname: 'new' }));
     });
+
+    test('친구코드 변경 시각과 참여 횟수 수정 불가', async () => {
+        await env.withSecurityRulesDisabled(async (ctx) => {
+            await ctx.firestore().doc('users/alice').set({
+                nickname: 'a', friendCodeChangedAt: 100, appointmentCount: 3
+            });
+        });
+        const db = env.authenticatedContext('alice').firestore();
+        await assertFails(db.doc('users/alice').update({ friendCodeChangedAt: 0 }));
+        await assertFails(db.doc('users/alice').update({ appointmentCount: 0 }));
+    });
+
     test('본인 문서 삭제 불가', async () => {
         await env.withSecurityRulesDisabled(async (ctx) => {
             await ctx.firestore().doc('users/alice').set({ nickname: 'a' });

@@ -10,8 +10,9 @@ service cloud.firestore {
 
         // 앱이 직접 쓰면 안 되는 필드 (서버 함수만 변경)
         function serverOnlyKeys() {
-          return ['lateCount', 'totalLateMinutes',
-                  'friendCode', 'onboardingCompleted', 'notificationEnabled'];
+          return ['lateCount', 'totalLateMinutes', 'appointmentCount',
+                  'friendCode', 'friendCodeChangedAt',
+                  'onboardingCompleted', 'notificationEnabled'];
         }
 
         // 본인 유저 문서만 읽기/수정
