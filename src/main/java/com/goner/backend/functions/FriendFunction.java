@@ -2,7 +2,6 @@ package com.goner.backend.functions;
 
 import com.goner.backend.AuthUtil;
 import com.goner.backend.FirebaseConfig;
-import com.google.api.client.json.Json;
 import com.google.cloud.firestore.DocumentSnapshot;
 import com.google.cloud.firestore.Firestore;
 import com.google.cloud.functions.HttpFunction;
@@ -15,6 +14,8 @@ import com.google.cloud.Timestamp;
 import com.google.cloud.firestore.DocumentReference;
 import com.google.cloud.firestore.QueryDocumentSnapshot;
 import com.google.gson.JsonArray;
+
+import com.google.cloud.firestore.WriteBatch;
 
 import java.util.Map;
 
@@ -56,8 +57,12 @@ public class FriendFunction implements HttpFunction {
             String targetUid = findTargetUid(request, response, db, uid);
             if (targetUid == null) return;
             deleteRequest(response, db, uid + "_" + targetUid);
-        }else {
-            error(response,404,"not_found");
+        } else if (path.equals("/list") && method.equals("GET")) {
+            list(response,db,uid);
+        } else if (path.equals("/remove") && method.equals("POST")) {
+            remove(request,response,db,uid);
+        } else {
+            error(response, 404, "not_found");
         }
     }
 
@@ -213,6 +218,49 @@ public class FriendFunction implements HttpFunction {
         requestRef.delete().get();
         response.getWriter().write("{\"ok\":true}");
     }
+
+    private void list(HttpResponse response, Firestore db, String uid) throws Exception {
+        JsonArray friends = new JsonArray();
+
+        for (QueryDocumentSnapshot doc : db.collection("users").document(uid)
+                .collection("friends").get().get().getDocuments()) {
+            DocumentSnapshot user = db.collection("users").document(doc.getId()).get().get();
+            if (!user.exists()) continue;
+
+            JsonObject item = new JsonObject();
+            item.addProperty("nickname", user.getString("nickname"));
+            item.addProperty("friendCode", user.getString("friendCode"));
+            friends.add(item);
+        }
+
+        JsonObject result = new JsonObject();
+        result.add("friends", friends);
+        response.getWriter().write(result.toString());
+    }
+
+    private void remove(HttpRequest request, HttpResponse response,
+                        Firestore db, String uid) throws Exception {
+        String targetUid = findTargetUid(request, response, db, uid);
+        if (targetUid == null) return;
+
+        DocumentReference mine = db.collection("users").document(uid)
+                .collection("friends").document(targetUid);
+        DocumentReference theirs = db.collection("users").document(targetUid)
+                .collection("friends").document(uid);
+
+        if (!mine.get().get().exists()) {
+            error(response, 404, "not_friend");
+            return;
+        }
+
+        WriteBatch batch = db.batch();
+        batch.delete(mine);
+        batch.delete(theirs);
+        batch.commit().get();
+
+        response.getWriter().write("{\"ok\":true}");
+    }
+
 
     private static boolean isActive(DocumentSnapshot doc) {
         return doc.exists() && doc.getTimestamp("expiresAt").compareTo(Timestamp.now()) > 0;

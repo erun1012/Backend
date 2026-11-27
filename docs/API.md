@@ -107,3 +107,19 @@
 ### GET /requests
 응답: `{"received":[{"nickname":"alice","friendCode":"alice1","createdAt":"..."}],"sent":[]}`
 - 만료된 요청은 제외, 시각은 UTC
+
+### POST /accept, /reject, /cancel
+요청: `{"friendCode":"상대 친구코드"}`
+응답: `{"ok":true}`
+- accept·reject는 받은 요청, cancel은 보낸 요청에 사용
+  에러: 400 `invalid_body` `invalid_code` `cannot_add_self`,
+  404 `user_not_found` `request_not_found`
+
+### GET /list
+응답: `{"friends":[{"nickname":"bob","friendCode":"bob12"}]}`
+
+### POST /remove
+요청: `{"friendCode":"상대 친구코드"}`
+응답: `{"ok":true}`
+에러: 400 `invalid_body` `invalid_code` `cannot_add_self`,
+404 `user_not_found` `not_friend`
