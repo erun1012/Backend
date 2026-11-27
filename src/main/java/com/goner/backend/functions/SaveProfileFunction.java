@@ -25,7 +25,7 @@ import java.util.regex.Pattern;
 public class SaveProfileFunction implements HttpFunction{
     private static final Pattern CODE_PATTERN = Pattern.compile("^[a-z0-9]{4,16}$");
     private static final int NICKNAME_MAX = 10;
-    private static final long CODE_LOCK_DAYS=180;
+    static final long CODE_LOCK_DAYS=180;
 
     @Override
     public void service(HttpRequest request, HttpResponse response) throws Exception {

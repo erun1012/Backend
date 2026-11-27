@@ -9,6 +9,9 @@ import com.google.cloud.functions.HttpResponse;
 import com.google.firebase.cloud.FirestoreClient;
 import com.google.gson.JsonObject;
 import static com.goner.backend.ApiUtil.error;
+import com.google.cloud.Timestamp;
+import java.time.Instant;
+import java.time.Duration;
 
 public class GetMeFunction implements HttpFunction {
 
@@ -42,6 +45,19 @@ public class GetMeFunction implements HttpFunction {
         result.addProperty("notificationEnabled", notificationEnabled);
         result.addProperty("nickname", user.exists() ? user.getString("nickname") : null);
         result.addProperty("friendCode", user.exists() ? user.getString("friendCode") : null);
+
+        boolean friendCodeLocked=false;
+        String friendCodeEditableAt = null;
+        Timestamp changedAt = user.exists() ? user.getTimestamp("friendCodeChangedAt") : null;
+        if(!onboardingCompleted && changedAt !=null) {
+            Instant editableAt = Instant.ofEpochSecond(changedAt.getSeconds()).plus(Duration.ofDays(SaveProfileFunction.CODE_LOCK_DAYS));
+            if(editableAt.isAfter(Instant.now())) {
+                friendCodeLocked=true;
+                friendCodeEditableAt = editableAt.toString();
+            }
+        }
+        result.addProperty("friendCodeLocked",friendCodeLocked);
+        result.addProperty("friendCodeEditableAt",friendCodeEditableAt);
 
         response.getWriter().write(result.toString());
     }
