@@ -2,6 +2,7 @@ package com.goner.backend.functions;
 
 import com.goner.backend.AuthUtil;
 import com.goner.backend.FirebaseConfig;
+import com.google.cloud.Timestamp;
 import com.google.cloud.firestore.DocumentReference;
 import com.google.cloud.firestore.DocumentSnapshot;
 import com.google.cloud.firestore.Firestore;
@@ -16,12 +17,16 @@ import com.google.gson.JsonParseException;
 import com.google.gson.JsonParser;
 
 import java.io.IOException;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Pattern;
 
 public class SaveProfileFunction implements HttpFunction{
     private static final Pattern CODE_PATTERN = Pattern.compile("^[a-z0-9]{4,16}$");
     private static final int NICKNAME_MAX = 10;
+    private static final long CODE_LOCK_DAYS=180;
 
     @Override
     public void service(HttpRequest request, HttpResponse response) throws Exception {
@@ -58,7 +63,7 @@ public class SaveProfileFunction implements HttpFunction{
         FirebaseConfig.init();
         Firestore db = FirestoreClient.getFirestore();
 
-        Boolean saved = db.runTransaction(tx -> {
+        String result = db.runTransaction(tx -> {
             DocumentReference codeRef = db.collection("friendCodes").document(code);
             DocumentReference userRef = db.collection("users").document(uid);
 
@@ -66,21 +71,47 @@ public class SaveProfileFunction implements HttpFunction{
             DocumentSnapshot userDoc = tx.get(userRef).get();
 
             if (codeDoc.exists() && !uid.equals(codeDoc.getString("uid"))) {
-                return false;
+                return "code_taken";
             }
 
             String oldCode = userDoc.getString("friendCode");
-            if (oldCode != null && !oldCode.equals(code)) {
+            boolean changing = oldCode != null && !oldCode.equals(code);
+            boolean onboarded = Boolean.TRUE.equals(userDoc.getBoolean("onboardingCompleted"));
+            boolean limited = changing && onboarded;   // 6개월 제한 대상
+
+            if (limited) {
+                Timestamp changedAt = userDoc.getTimestamp("friendCodeChangedAt");
+                if (changedAt != null) {
+                    Instant editableAt = Instant.ofEpochSecond(changedAt.getSeconds())
+                            .plus(Duration.ofDays(CODE_LOCK_DAYS));
+                    if (editableAt.isAfter(Instant.now())) {
+                        return "code_change_locked";
+                    }
+                }
+            }
+
+            if (changing) {
                 tx.delete(db.collection("friendCodes").document(oldCode));
             }
 
+            Map<String, Object> data = new HashMap<>();
+            data.put("nickname", nickname);
+            data.put("friendCode", code);
+            if (limited) {
+                data.put("friendCodeChangedAt", Timestamp.now());
+            }
+
             tx.set(codeRef, Map.of("uid", uid));
-            tx.set(userRef, Map.of("nickname", nickname, "friendCode", code), SetOptions.merge());
-            return true;
+            tx.set(userRef, data, SetOptions.merge());
+            return "ok";
         }).get();
 
-        if (!saved) {
+        if (result.equals("code_taken")) {
             error(response, 409, "code_taken");
+            return;
+        }
+        if (result.equals("code_change_locked")) {
+            error(response, 403, "code_change_locked");
             return;
         }
         response.getWriter().write("{\"ok\":true}");
