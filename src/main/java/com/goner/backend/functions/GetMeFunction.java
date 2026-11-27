@@ -49,7 +49,7 @@ public class GetMeFunction implements HttpFunction {
         boolean friendCodeLocked=false;
         String friendCodeEditableAt = null;
         Timestamp changedAt = user.exists() ? user.getTimestamp("friendCodeChangedAt") : null;
-        if(!onboardingCompleted && changedAt !=null) {
+        if(onboardingCompleted && changedAt !=null) {
             Instant editableAt = Instant.ofEpochSecond(changedAt.getSeconds()).plus(Duration.ofDays(SaveProfileFunction.CODE_LOCK_DAYS));
             if(editableAt.isAfter(Instant.now())) {
                 friendCodeLocked=true;
