@@ -2,6 +2,7 @@ package com.goner.backend.functions;
 
 import com.goner.backend.AuthUtil;
 import com.goner.backend.FirebaseConfig;
+import com.google.api.client.json.Json;
 import com.google.cloud.firestore.DocumentSnapshot;
 import com.google.cloud.firestore.Firestore;
 import com.google.cloud.functions.HttpFunction;
@@ -12,8 +13,9 @@ import com.google.gson.JsonObject;
 
 import com.google.cloud.Timestamp;
 import com.google.cloud.firestore.DocumentReference;
+import com.google.cloud.firestore.QueryDocumentSnapshot;
+import com.google.gson.JsonArray;
 
-import java.sql.Time;
 import java.util.Map;
 
 import static com.goner.backend.ApiUtil.error;
@@ -42,6 +44,8 @@ public class FriendFunction implements HttpFunction {
             search(request,response, db, uid);
         } else if(path.equals("/request") && method.equals("POST")) {
             sendRequest(request, response, db, uid);
+        } else if(path.equals("/requests")&& method.equals("GET")){
+          requests(response,db,uid);
         } else {
             error(response,404,"not_found");
         }
@@ -129,8 +133,36 @@ public class FriendFunction implements HttpFunction {
 
     }
 
+    private void requests(HttpResponse response, Firestore db, String uid) throws Exception {
+        JsonObject result = new JsonObject();
+        result.add("received", requestList(db, uid, "toUid", "fromUid"));
+        result.add("sent", requestList(db, uid, "fromUid", "toUid"));
+        response.getWriter().write(result.toString());
+    }
+
+    private JsonArray requestList(Firestore db, String uid, String myField, String otherField) throws Exception {
+        JsonArray list = new JsonArray();
+
+        for (QueryDocumentSnapshot doc : db.collection("friendRequests")
+                .whereEqualTo(myField, uid).get().get().getDocuments()) {
+            if (!isActive(doc)) continue;   // 만료된 요청은 제외
+
+            DocumentSnapshot user = db.collection("users")
+                    .document(doc.getString(otherField)).get().get();
+            if (!user.exists()) continue;
+
+            JsonObject item = new JsonObject();
+            item.addProperty("nickname", user.getString("nickname"));
+            item.addProperty("friendCode", user.getString("friendCode"));
+            item.addProperty("createdAt", doc.getTimestamp("createdAt").toString());
+            list.add(item);
+        }
+        return list;
+    }
+
     private static boolean isActive(DocumentSnapshot doc) {
         return doc.exists() && doc.getTimestamp("expiresAt").compareTo(Timestamp.now()) > 0;
     }
+
 
 }

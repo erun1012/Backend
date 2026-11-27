@@ -91,3 +91,19 @@
 |---|---|---|
 | 405 | `method_not_allowed` | POST가 아님 |
 | 500 | `auth_delete_failed` | 로그인 계정 삭제 실패 (Firestore 정보는 이미 삭제됨) |
+
+## Friend (로컬 포트 8086)
+
+### GET /search?code=친구코드
+응답: `{"nickname":"bob","friendCode":"bob12","isMe":false}`
+에러: 400 `invalid_code`, 404 `user_not_found`
+
+### POST /request
+요청: `{"friendCode":"bob12"}`
+응답: `{"ok":true}` (요청은 7일 뒤 만료)
+에러: 400 `invalid_body` `invalid_code` `cannot_add_self`, 404 `user_not_found`,
+409 `already_friends` `already_requested` `request_received`
+
+### GET /requests
+응답: `{"received":[{"nickname":"alice","friendCode":"alice1","createdAt":"..."}],"sent":[]}`
+- 만료된 요청은 제외, 시각은 UTC
