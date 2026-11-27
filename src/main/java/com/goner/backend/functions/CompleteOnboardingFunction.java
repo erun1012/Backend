@@ -11,13 +11,9 @@ import com.google.cloud.functions.HttpResponse;
 import com.google.firebase.cloud.FirestoreClient;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParseException;
-import com.google.gson.JsonParser;
 import static com.goner.backend.ApiUtil.error;
-import static com.goner.backend.ApiUtil.getString;
 import static com.goner.backend.ApiUtil.parseBody;
 
-import java.io.IOException;
 import java.util.Map;
 
 public class CompleteOnboardingFunction implements HttpFunction {
@@ -66,16 +62,6 @@ public class CompleteOnboardingFunction implements HttpFunction {
         response.getWriter().write("{\"ok\":true}");
     }
 
-    private static JsonObject parseBody(HttpRequest request) {
-        try {
-            return JsonParser.parseReader(request.getReader()).getAsJsonObject();
-        } catch (JsonParseException | IllegalStateException | IOException ex) {
-            return null;
-        }
-    }
 
-    private static void error(HttpResponse response, int status, String message) throws IOException {
-        response.setStatusCode(status);
-        response.getWriter().write("{\"error\":\"" + message + "\"}");
-    }
+
 }

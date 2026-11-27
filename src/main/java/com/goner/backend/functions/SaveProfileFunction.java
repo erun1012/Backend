@@ -11,15 +11,11 @@ import com.google.cloud.functions.HttpFunction;
 import com.google.cloud.functions.HttpRequest;
 import com.google.cloud.functions.HttpResponse;
 import com.google.firebase.cloud.FirestoreClient;
-import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParseException;
-import com.google.gson.JsonParser;
 import static com.goner.backend.ApiUtil.error;
 import static com.goner.backend.ApiUtil.getString;
 import static com.goner.backend.ApiUtil.parseBody;
 
-import java.io.IOException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.HashMap;
@@ -120,21 +116,5 @@ public class SaveProfileFunction implements HttpFunction{
         response.getWriter().write("{\"ok\":true}");
     }
 
-    private static JsonObject parseBody(HttpRequest request) {
-        try {
-            return JsonParser.parseReader(request.getReader()).getAsJsonObject();
-        } catch (JsonParseException | IllegalStateException | IOException e) {
-            return null;
-        }
-    }
 
-    private static String getString(JsonObject obj, String key) {
-        JsonElement e = obj.get(key);
-        return (e == null || !e.isJsonPrimitive()) ? "" : e.getAsString().trim();
-    }
-
-    private static void error(HttpResponse response, int status, String message) throws IOException {
-        response.setStatusCode(status);
-        response.getWriter().write("{\"error\":\"" + message + "\"}");
-    }
 }

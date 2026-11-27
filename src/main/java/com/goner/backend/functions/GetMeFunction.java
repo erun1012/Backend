@@ -9,9 +9,6 @@ import com.google.cloud.functions.HttpResponse;
 import com.google.firebase.cloud.FirestoreClient;
 import com.google.gson.JsonObject;
 import static com.goner.backend.ApiUtil.error;
-import static com.goner.backend.ApiUtil.getString;
-import static com.goner.backend.ApiUtil.parseBody;
-import java.io.IOException;
 
 public class GetMeFunction implements HttpFunction {
 
@@ -49,8 +46,4 @@ public class GetMeFunction implements HttpFunction {
         response.getWriter().write(result.toString());
     }
 
-    private static void error(HttpResponse response, int status, String message) throws IOException {
-        response.setStatusCode(status);
-        response.getWriter().write("{\"error\":\"" + message + "\"}");
-    }
 }

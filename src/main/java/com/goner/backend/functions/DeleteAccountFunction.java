@@ -12,10 +12,6 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseAuthException;
 import com.google.firebase.cloud.FirestoreClient;
 import static com.goner.backend.ApiUtil.error;
-import static com.goner.backend.ApiUtil.getString;
-import static com.goner.backend.ApiUtil.parseBody;
-
-import java.io.IOException;
 
 public class DeleteAccountFunction implements HttpFunction {
 
@@ -62,8 +58,4 @@ public class DeleteAccountFunction implements HttpFunction {
         response.getWriter().write("{\"ok\":true}");
     }
 
-    private static void error(HttpResponse response, int status, String message) throws IOException {
-        response.setStatusCode(status);
-        response.getWriter().write("{\"error\":\"" + message + "\"}");
-    }
 }
