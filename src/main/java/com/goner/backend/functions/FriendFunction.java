@@ -46,7 +46,17 @@ public class FriendFunction implements HttpFunction {
             sendRequest(request, response, db, uid);
         } else if(path.equals("/requests")&& method.equals("GET")){
           requests(response,db,uid);
-        } else {
+        } else if(path.equals("/accept") && method.equals("POST")) {
+            accept(request, response, db, uid);
+        } else if (path.equals("/reject") && method.equals("POST")) {
+            String targetUid = findTargetUid(request, response, db, uid);
+            if (targetUid == null) return;
+            deleteRequest(response, db, targetUid + "_" + uid);   // 받은 요청
+        } else if (path.equals("/cancel") && method.equals("POST")) {
+            String targetUid = findTargetUid(request, response, db, uid);
+            if (targetUid == null) return;
+            deleteRequest(response, db, uid + "_" + targetUid);
+        }else {
             error(response,404,"not_found");
         }
     }
@@ -77,27 +87,8 @@ public class FriendFunction implements HttpFunction {
     }
 
     private void sendRequest(HttpRequest request, HttpResponse response, Firestore db, String uid) throws Exception {
-        JsonObject body = parseBody(request);
-        if(body==null) {
-            error(response,400,"invalid_body");
-            return;
-        }
-        String code = getString(body,"friendCode");
-        if(!code.matches("^[a-z0-9]{4,16}$")) {
-            error(response,400,"invalid_code");
-            return;
-        }
-
-        DocumentSnapshot codeDoc = db.collection("friendCodes").document(code).get().get();
-        if(!codeDoc.exists()) {
-            error(response,404,"user_not_found");
-            return;
-        }
-        String targetUid = codeDoc.getString("uid");
-        if(uid.equals(targetUid)) {
-            error(response,400,"cannot_add_self");
-            return;
-        }
+        String targetUid = findTargetUid(request,response,db,uid);
+        if(targetUid==null) return;
 
         String result = db.runTransaction(tx -> {
             DocumentReference friendRef = db.collection("users").document(uid).collection("friends").document(targetUid);
@@ -158,6 +149,69 @@ public class FriendFunction implements HttpFunction {
             list.add(item);
         }
         return list;
+    }
+
+    private String findTargetUid(HttpRequest request, HttpResponse response,
+                                 Firestore db, String uid) throws Exception {
+        JsonObject body = parseBody(request);
+        if (body == null) {
+            error(response, 400, "invalid_body");
+            return null;
+        }
+        String code = getString(body, "friendCode");
+        if (!code.matches("^[a-z0-9]{4,16}$")) {
+            error(response, 400, "invalid_code");
+            return null;
+        }
+        DocumentSnapshot codeDoc = db.collection("friendCodes").document(code).get().get();
+        if (!codeDoc.exists()) {
+            error(response, 404, "user_not_found");
+            return null;
+        }
+        String targetUid = codeDoc.getString("uid");
+        if (uid.equals(targetUid)) {
+            error(response, 400, "cannot_add_self");
+            return null;
+        }
+        return targetUid;
+    }
+
+    private void accept(HttpRequest request, HttpResponse response,
+                        Firestore db, String uid) throws Exception {
+        String targetUid = findTargetUid(request, response, db, uid);
+        if (targetUid == null) return;
+
+        boolean accepted = db.runTransaction(tx -> {
+            DocumentReference requestRef = db.collection("friendRequests")
+                    .document(targetUid + "_" + uid);
+            if (!isActive(tx.get(requestRef).get())) return false;
+
+            Map<String, Object> data = Map.of("createdAt", Timestamp.now());
+            tx.set(db.collection("users").document(uid)
+                    .collection("friends").document(targetUid), data);
+            tx.set(db.collection("users").document(targetUid)
+                    .collection("friends").document(uid), data);
+            tx.delete(requestRef);
+            return true;
+        }).get();
+
+        if (!accepted) {
+            error(response, 404, "request_not_found");
+            return;
+        }
+        response.getWriter().write("{\"ok\":true}");
+    }
+
+    // 요청 삭제 (거절, 취소 공통)
+    private void deleteRequest(HttpResponse response, Firestore db,
+                               String requestId) throws Exception {
+        DocumentReference requestRef = db.collection("friendRequests").document(requestId);
+        if (!requestRef.get().get().exists()) {
+            error(response, 404, "request_not_found");
+            return;
+        }
+        requestRef.delete().get();
+        response.getWriter().write("{\"ok\":true}");
     }
 
     private static boolean isActive(DocumentSnapshot doc) {
